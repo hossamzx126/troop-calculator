@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alliance Rally & Troop Ratio Calculator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Rajdhani', 'sans-serif'],
+                    },
+                    colors: {
+                        infantry: '#3b82f6', // Blue
+                        lancer: '#eab308',   // Gold/Yellow
+                        marksman: '#ef4444', // Red
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(239, 68, 68, 0.1) 0px, transparent 50%);
+            min-height: 100vh;
+        }
+        .glow-box {
+            box-shadow: 0 0 25px -5px rgba(59, 130, 246, 0.15);
+        }
+        .custom-input {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            transition: all 0.2s ease-in-out;
+        }
+        .custom-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+            outline: none;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased p-3 sm:p-6 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Top Navigation Header -->
+        <header class="flex flex-col sm:flex-row justify-between items-center bg-slate-900/80 backdrop-blur-md p-4 sm:p-6 rounded-2xl border border-slate-800 shadow-xl gap-4">
+            <div class="flex items-center gap-4 text-center sm:text-left">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-lg shadow-blue-500/30 text-2xl">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h1 class="font-display font-bold text-2xl sm:text-3xl tracking-wide text-white uppercase flex items-center gap-2 justify-center sm:justify-start">
+                        Troop Ratio Calculator
+                    </h1>
+                    <p class="text-xs sm:text-sm text-slate-400">Tactical Alliance Rally & Team Dispatch Optimizer</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button id="loadPresetBtn" onclick="loadPresetData()" class="px-3.5 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Sample Data
+                </button>
+                <button id="resetBtn" onclick="resetForm()" class="px-3.5 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-left"></i> Reset
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content 2-Column Grid -->
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- LEFT COLUMN: Input Form Controls (6 cols) -->
+            <section class="lg:col-span-6 bg-slate-900/90 rounded-2xl border border-slate-800 p-5 sm:p-6 shadow-xl space-y-5">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="font-display text-lg font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-blue-500"></i> Input Parameters
+                    </h2>
+                    <span class="text-xs text-slate-500">Required values</span>
+                </div>
+
+                <form id="calcForm" onsubmit="return false;" class="space-y-4">
+                    
+                    <!-- Team Specs Section -->
+                    <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800/80 space-y-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-blue-400 block mb-1">1. Team Settings</span>
+                        
+                        <!-- 1. Team Numbers -->
+                        <div>
+                            <label for="teamNumbers" class="block text-xs font-medium text-slate-300 mb-1">
+                                Team Numbers
+                            </label>
+                            <div class="relative">
+                                <i class="fa-solid fa-users absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+                                <input type="number" id="teamNumbers" value="0" min="0" step="1"
+                                    class="w-full custom-input pl-9 pr-3 py-2 text-sm text-white rounded-lg placeholder-slate-600 font-semibold"
+                                    placeholder="Enter total teams..." oninput="calculateResults()">
+                            </div>
+                        </div>
+
+                        <!-- 2. Team Capacity -->
+                        <div>
+                            <label for="teamCapacity" class="block text-xs font-medium text-slate-300 mb-1">
+                                Base Team Capacity
+                            </label>
+                            <div class="relative">
+                                <i class="fa-solid fa-warehouse absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+                                <input type="number" id="teamCapacity" value="0" min="0" step="1000"
+                                    class="w-full custom-input pl-9 pr-3 py-2 text-sm text-white rounded-lg placeholder-slate-600 font-semibold"
+                                    placeholder="Enter base capacity..." oninput="calculateResults()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Troop Numbers Section -->
+                    <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800/80 space-y-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-amber-400 block mb-1">2. Total Troops Available</span>
+                        
+                        <!-- 3. Total Infantry -->
+                        <div>
+                            <label for="totalInfantry" class="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
+                                <span><i class="fa-solid fa-shield text-blue-400 mr-1"></i> Total Infantry</span>
+                            </label>
+                            <input type="number" id="totalInfantry" value="0" min="0" step="500"
+                                class="w-full custom-input px-3 py-2 text-sm text-white rounded-lg font-semibold border-l-4 border-l-blue-500"
+                                placeholder="Enter total infantry..." oninput="calculateResults()">
+                        </div>
+
+                        <!-- 4. Total Lancer -->
+                        <div>
+                            <label for="totalLancer" class="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
+                                <span><i class="fa-solid fa-hand-back-fist text-amber-400 mr-1"></i> Total Lancer</span>
+                            </label>
+                            <input type="number" id="totalLancer" value="0" min="0" step="500"
+                                class="w-full custom-input px-3 py-2 text-sm text-white rounded-lg font-semibold border-l-4 border-l-amber-500"
+                                placeholder="Enter total lancer..." oninput="calculateResults()">
+                        </div>
+
+                        <!-- 5. Total Marksmen -->
+                        <div>
+                            <label for="totalMarksmen" class="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
+                                <span><i class="fa-solid fa-crosshair text-red-400 mr-1"></i> Total Marksmen</span>
+                            </label>
+                            <input type="number" id="totalMarksmen" value="0" min="0" step="500"
+                                class="w-full custom-input px-3 py-2 text-sm text-white rounded-lg font-semibold border-l-4 border-l-red-500"
+                                placeholder="Enter total marksmen..." oninput="calculateResults()">
+                        </div>
+                    </div>
+
+                    <!-- Pet & Skill Capacity Buffs -->
+                    <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800/80 space-y-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-cyan-400 block mb-1">3. Skill & Pet Buffs</span>
+                        
+                        <!-- 6. Snow Ape pet Capacity -->
+                        <div>
+                            <label for="snowApeCapacity" class="block text-xs font-medium text-slate-300 mb-1">
+                                Snow Ape Pet Capacity
+                            </label>
+                            <div class="relative">
+                                <i class="fa-solid fa-paw absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400 text-sm"></i>
+                                <input type="number" id="snowApeCapacity" value="0" min="0" step="500"
+                                    class="w-full custom-input pl-9 pr-3 py-2 text-sm text-white rounded-lg font-semibold"
+                                    placeholder="Enter Snow Ape capacity..." oninput="calculateResults()">
+                            </div>
+                        </div>
+
+                        <!-- 7. Cyrille Ursa's Bane Capacity -->
+                        <div>
+                            <label for="cyrilleCapacity" class="block text-xs font-medium text-slate-300 mb-1">
+                                Cyrille Ursa's Bane Capacity
+                            </label>
+                            <div class="relative">
+                                <i class="fa-solid fa-shield-cat absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 text-sm"></i>
+                                <input type="number" id="cyrilleCapacity" value="0" min="0" step="500"
+                                    class="w-full custom-input pl-9 pr-3 py-2 text-sm text-white rounded-lg font-semibold"
+                                    placeholder="Enter Cyrille Ursa capacity..." oninput="calculateResults()">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+
+            <!-- RIGHT COLUMN: Troop Composition & Ratio (6 cols) -->
+            <section class="lg:col-span-6 space-y-6">
+
+                <div class="bg-slate-900/90 rounded-2xl border border-slate-800 p-5 sm:p-6 shadow-xl space-y-6">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <div>
+                            <h3 class="font-display text-xl font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-pie text-emerald-400"></i> Troop Composition & Ratio
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">(Per Team / Total Capacity)</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        
+                        <!-- Infantry Card -->
+                        <div class="bg-slate-950 p-5 rounded-xl border border-blue-500/30 flex items-center justify-between">
+                            <div>
+                                <span class="text-sm font-bold uppercase text-blue-400 flex items-center gap-2 mb-1">
+                                    <i class="fa-solid fa-shield text-base"></i> Infantry
+                                </span>
+                                <div class="text-2xl font-bold text-white font-mono" id="outInfantryPerTeam">0</div>
+                                <span class="text-xs text-slate-500">Troops per team</span>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-3xl font-extrabold font-mono text-blue-400" id="outInfantryPct">0.00%</div>
+                                <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">% of Total Capacity</span>
+                            </div>
+                        </div>
+
+                        <!-- Lancer Card -->
+                        <div class="bg-slate-950 p-5 rounded-xl border border-amber-500/30 flex items-center justify-between">
+                            <div>
+                                <span class="text-sm font-bold uppercase text-amber-400 flex items-center gap-2 mb-1">
+                                    <i class="fa-solid fa-hand-back-fist text-base"></i> Lancer
+                                </span>
+                                <div class="text-2xl font-bold text-white font-mono" id="outLancerPerTeam">0</div>
+                                <span class="text-xs text-slate-500">Troops per team</span>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-3xl font-extrabold font-mono text-amber-400" id="outLancerPct">0.00%</div>
+                                <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">% of Total Capacity</span>
+                            </div>
+                        </div>
+
+                        <!-- Marksmen Card -->
+                        <div class="bg-slate-950 p-5 rounded-xl border border-red-500/30 flex items-center justify-between">
+                            <div>
+                                <span class="text-sm font-bold uppercase text-red-400 flex items-center gap-2 mb-1">
+                                    <i class="fa-solid fa-crosshair text-base"></i> Marksmen
+                                </span>
+                                <div class="text-2xl font-bold text-white font-mono" id="outMarksmenPerTeam">0</div>
+                                <span class="text-xs text-slate-500">Troops per team</span>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-3xl font-extrabold font-mono text-red-400" id="outMarksmenPct">0.00%</div>
+                                <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">% of Total Capacity</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="text-center text-xs text-slate-500 py-4 border-t border-slate-800/60">
+            Rally Troop Ratio Calculator &bull; Focused Ratio Tool
+        </footer>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 opacity-0 transition-opacity duration-300 pointer-events-none z-50">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toastMsg">Action completed</span>
+    </div>
+
+    <script>
+        // Initialize App on DOM Load
+        window.onload = function() {
+            calculateResults();
+        };
+
+        // Helper function for formatted numbers
+        function formatNum(num) {
+            return new Intl.NumberFormat('en-US').format(Math.round(num));
+        }
+
+        // Core Calculation Function
+        function calculateResults() {
+            // 1. Retrieve Inputs
+            const teamNumbers = Math.max(0, parseFloat(document.getElementById('teamNumbers').value) || 0);
+            const teamCapacity = Math.max(0, parseFloat(document.getElementById('teamCapacity').value) || 0);
+            
+            const totalInfantry = Math.max(0, parseFloat(document.getElementById('totalInfantry').value) || 0);
+            const totalLancer = Math.max(0, parseFloat(document.getElementById('totalLancer').value) || 0);
+            const totalMarksmen = Math.max(0, parseFloat(document.getElementById('totalMarksmen').value) || 0);
+
+            const snowApeCapacity = Math.max(0, parseFloat(document.getElementById('snowApeCapacity').value) || 0);
+            const cyrilleCapacity = Math.max(0, parseFloat(document.getElementById('cyrilleCapacity').value) || 0);
+
+            // 2. Perform Required Equations (safely handle division by zero)
+            const infantryPerTeam = teamNumbers > 0 ? (totalInfantry / teamNumbers) : 0;
+            const lancerPerTeam = teamNumbers > 0 ? (totalLancer / teamNumbers) : 0;
+            const marksmenPerTeam = teamNumbers > 0 ? (totalMarksmen / teamNumbers) : 0;
+
+            const totalCapacity = teamCapacity + snowApeCapacity + cyrilleCapacity;
+
+            const marksmenRatio = totalCapacity > 0 ? (marksmenPerTeam / totalCapacity) : 0;
+            const lancerRatio = totalCapacity > 0 ? (lancerPerTeam / totalCapacity) : 0;
+            const infantryRatio = totalCapacity > 0 ? (infantryPerTeam / totalCapacity) : 0;
+
+            // 3. Update DOM Displays
+            document.getElementById('outInfantryPerTeam').innerText = formatNum(infantryPerTeam);
+            document.getElementById('outLancerPerTeam').innerText = formatNum(lancerPerTeam);
+            document.getElementById('outMarksmenPerTeam').innerText = formatNum(marksmenPerTeam);
+
+            // Percentage displays
+            document.getElementById('outInfantryPct').innerText = (infantryRatio * 100).toFixed(2) + '%';
+            document.getElementById('outLancerPct').innerText = (lancerRatio * 100).toFixed(2) + '%';
+            document.getElementById('outMarksmenPct').innerText = (marksmenRatio * 100).toFixed(2) + '%';
+        }
+
+        function loadPresetData() {
+            document.getElementById('teamNumbers').value = 3;
+            document.getElementById('teamCapacity').value = 150000;
+            document.getElementById('totalInfantry').value = 90000;
+            document.getElementById('totalLancer').value = 135000;
+            document.getElementById('totalMarksmen').value = 225000;
+            document.getElementById('snowApeCapacity').value = 15000;
+            document.getElementById('cyrilleCapacity').value = 40000;
+            calculateResults();
+            showToast('Loaded sample values!');
+        }
+
+        function resetForm() {
+            document.getElementById('teamNumbers').value = 0;
+            document.getElementById('teamCapacity').value = 0;
+            document.getElementById('totalInfantry').value = 0;
+            document.getElementById('totalLancer').value = 0;
+            document.getElementById('totalMarksmen').value = 0;
+            document.getElementById('snowApeCapacity').value = 0;
+            document.getElementById('cyrilleCapacity').value = 0;
+            calculateResults();
+            showToast('Form reset to 0.');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
